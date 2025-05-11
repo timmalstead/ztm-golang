@@ -37,6 +37,17 @@ const (
 	Guest      = 50
 )
 
+func determineAccess(day, role int) bool {
+	var (
+		isABossOnAnyDay           = role <= Manager
+		isAContractorOnTheWeekend = role == Contractor && day > Friday
+		isAMemberOnAWeekday       = role == Member && day < Saturday
+		isAGuestOnGuestDays       = role == Guest && (day == Monday || day == Wednesday || day == Friday)
+	)
+
+	return isABossOnAnyDay || isAContractorOnTheWeekend || isAMemberOnAWeekday || isAGuestOnGuestDays
+}
+
 func accessGranted() {
 	fmt.Println("Granted")
 }
@@ -47,15 +58,9 @@ func accessDenied() {
 
 func main() {
 	// The day and role. Change these to check your work.
-	var today, role = Monday, Guest
+	var today, role = Tuesday, Guest
 
-	var (
-		isABossOnAnyDay           = role <= Manager
-		isAContractorOnTheWeekend = role == Contractor && today > Friday
-		isAMemberOnAWeekday       = role == Member && today < Saturday
-		isAGuestOnGuestDays       = role == Guest && (today == Monday || today == Wednesday || today == Friday)
-		isAllowedAccess           = isABossOnAnyDay || isAContractorOnTheWeekend || isAMemberOnAWeekday || isAGuestOnGuestDays
-	)
+	var isAllowedAccess = determineAccess(today, role)
 
 	if isAllowedAccess {
 		accessGranted()
