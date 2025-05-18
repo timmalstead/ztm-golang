@@ -18,6 +18,22 @@ import "fmt"
 
 type Part string
 
-func main() {
+func showAssemblyLine(line []Part) {
+	fmt.Println()
+	for i := 0; i < len(line); i++ {
+		var currentPart = line[i]
+		fmt.Println(currentPart)
+	}
 }
 
+func main() {
+	//  - Create an assembly line having any three parts
+	var parts = []Part{"beep", "boop", "blip"}
+	showAssemblyLine(parts)
+	//  - Add two new parts to the line
+	parts = append(parts, "blap", "burs")
+	showAssemblyLine(parts)
+	//  - Slice the assembly line so it contains only the two new parts
+	parts = parts[3:]
+	showAssemblyLine(parts)
+}
