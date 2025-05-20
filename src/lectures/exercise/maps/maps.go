@@ -29,7 +29,49 @@ const (
 	Retired     = 3
 )
 
-func main() {
-	servers := []string{"darkstar", "aiur", "omicron", "w359", "baseline"}
+// * Create a function to print server status displaying:
+//   - number of servers
+//   - number of servers for each status (Online, Offline, Maintenance, Retired)
+func printServerInfo(serverMap map[string]int) {
+	var serverCounter = make(map[int]int)
+	for _, status := range serverMap {
+		serverCounter[status]++
+	}
+
+	var serverStatusTitles = []string{"Online", "Offline", "Maintenance", "Retired"}
+
+	fmt.Println("total servers:", len(serverMap))
+	fmt.Println("server statuses:")
+	for status, serverCount := range serverCounter {
+		fmt.Println(serverCount, "servers in state", serverStatusTitles[status])
+	}
 }
 
+func main() {
+	var servers = []string{"darkstar", "aiur", "omicron", "w359", "baseline"}
+
+	//* Create a map using the server names as the key and the server status
+	//  as the value
+	//* Set all of the server statuses to `Online` when creating the map
+	var serverMap = make(map[string]int)
+	for _, serverName := range servers {
+		serverMap[serverName] = Online
+	}
+
+	//  - call display server info function
+	printServerInfo(serverMap)
+
+	//  - change server status of `darkstar` to `Retired`
+	serverMap["darkstar"] = Retired
+	//  - change server status of `aiur` to `Offline`
+	serverMap["aiur"] = Offline
+	//  - call display server info function
+	printServerInfo(serverMap)
+
+	//  - change server status of all servers to `Maintenance`
+	for _, serverName := range servers {
+		serverMap[serverName] = Maintenance
+	}
+	//  - call display server info function
+	printServerInfo(serverMap)
+}
