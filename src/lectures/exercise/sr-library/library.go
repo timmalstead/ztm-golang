@@ -42,7 +42,11 @@ type Book struct {
 	timeLastCheckedOut int64
 }
 
-var p, unixTime = fmt.Println, time.Now().UnixNano
+var p = fmt.Println
+
+func unixTime() int64 {
+	return time.Now().UnixNano()
+}
 
 func createLibrary(libraryName string) Library {
 	return Library{
