@@ -32,11 +32,13 @@ type Library struct {
 
 type Member struct {
 	memberName               string
+	belongsToLibrary         *Library
 	booksCurrentlyCheckedOut map[string]*Book
 }
 
 type Book struct {
 	bookName           string
+	belongsToLibrary   *Library
 	checkedOutTo       *Member
 	timeLastReturned   int64
 	timeLastCheckedOut int64
@@ -56,18 +58,30 @@ func createLibrary(libraryName string) Library {
 	}
 }
 
-func createMember(memberName string) Member {
-	return Member{
+func (library *Library) enrollMember(memberName string) Member {
+	var newMember = Member{
 		memberName:               memberName,
+		belongsToLibrary:         library,
 		booksCurrentlyCheckedOut: map[string]*Book{},
 	}
+
+	library.membershipRecords[memberName] = &newMember
+
+	return newMember
 }
 
-func createBook(bookName string) Book {
-	return Book{bookName: bookName}
+func (library *Library) donateBook(bookName string) Book {
+	var newBook = Book{
+		bookName:         bookName,
+		belongsToLibrary: library,
+	}
+
+	library.bookRecords[bookName] = &newBook
+
+	return newBook
 }
 
-func checkoutBook(book *Book, libraryMember *Member) {
+func (book *Book) checkout(libraryMember *Member) {
 	if book.checkedOutTo == nil {
 		book.checkedOutTo = libraryMember
 		book.timeLastCheckedOut = unixTime()
@@ -78,25 +92,13 @@ func checkoutBook(book *Book, libraryMember *Member) {
 	}
 }
 
-func returnBook(book *Book) {
+func (book *Book) returnBook() {
 	delete(book.checkedOutTo.booksCurrentlyCheckedOut, book.bookName)
 	book.checkedOutTo = nil
 	book.timeLastReturned = unixTime()
 }
 
-func membershipDrive(library *Library, members []*Member) {
-	for _, member := range members {
-		library.membershipRecords[member.memberName] = member
-	}
-}
-
-func donateBooks(library *Library, books []*Book) {
-	for _, book := range books {
-		library.bookRecords[book.bookName] = book
-	}
-}
-
-func displayLibraryRecords(library *Library) {
+func (library *Library) displayLibraryRecords() {
 	p("Library status:")
 	for _, member := range library.membershipRecords {
 		if len(member.booksCurrentlyCheckedOut) > 0 {
@@ -112,53 +114,49 @@ func displayLibraryRecords(library *Library) {
 
 func main() {
 	var centralLibrary = createLibrary("Central Library")
-	displayLibraryRecords(&centralLibrary)
+	var d = centralLibrary.displayLibraryRecords
+
+	d()
 
 	var (
-		tim    = createMember("Tim")
-		sophia = createMember("Sophia")
-		sam    = createMember("Sam")
-		anna   = createMember("Anna")
+		tim    = centralLibrary.enrollMember("Tim")
+		sophia = centralLibrary.enrollMember("Sophia")
+		sam    = centralLibrary.enrollMember("Sam")
+		anna   = centralLibrary.enrollMember("Anna")
 	)
 
-	p("Membership drive!")
-	membershipDrive(&centralLibrary, []*Member{&tim, &sophia, &sam, &anna})
-
-	displayLibraryRecords(&centralLibrary)
+	d()
 
 	var (
-		miceAndMen = createBook("Of Mice and Men")
-		poppy      = createBook("Sloppy Poppy")
-		donQui     = createBook("Don Quixote")
-		rebecca    = createBook("Rebecca")
+		miceAndMen = centralLibrary.donateBook("Of Mice and Men")
+		poppy      = centralLibrary.donateBook("Sloppy Poppy")
+		donQui     = centralLibrary.donateBook("Don Quixote")
+		rebecca    = centralLibrary.donateBook("Rebecca")
 	)
 
-	p("Book fair!")
-	donateBooks(&centralLibrary, []*Book{&miceAndMen, &poppy, &donQui, &rebecca})
-	displayLibraryRecords(&centralLibrary)
+	d()
 
-	checkoutBook(&poppy, &tim)
-	checkoutBook(&miceAndMen, &sophia)
-	checkoutBook(&donQui, &sam)
-	checkoutBook(&donQui, &tim)
-	checkoutBook(&rebecca, &anna)
+	poppy.checkout(&tim)
+	miceAndMen.checkout(&sophia)
+	donQui.checkout(&sam)
+	donQui.checkout(&tim)
+	rebecca.checkout(&anna)
 
-	displayLibraryRecords(&centralLibrary)
+	d()
 
-	returnBook(&miceAndMen)
-	returnBook(&donQui)
-	returnBook(&rebecca)
+	miceAndMen.returnBook()
+	donQui.returnBook()
+	rebecca.returnBook()
 
-	displayLibraryRecords(&centralLibrary)
+	d()
 
-	checkoutBook(&miceAndMen, &tim)
-	checkoutBook(&donQui, &tim)
-	checkoutBook(&rebecca, &tim)
+	miceAndMen.checkout(&tim)
+	donQui.checkout(&tim)
+	rebecca.checkout(&tim)
 
-	displayLibraryRecords(&centralLibrary)
+	d()
 
-	returnBook(&poppy)
-	checkoutBook(&poppy, &tim)
+	poppy.returnBook()
 
-	displayLibraryRecords(&centralLibrary)
+	d()
 }
