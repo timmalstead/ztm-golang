@@ -31,6 +31,11 @@ type TimeInfo struct {
 	validator func(int) bool
 }
 
+var timeUnits = []TimeInfo{
+	{"hour", func(hour int) bool { return hour > 23 || hour < 0 }},
+	{"minute", func(minute int) bool { return minute > 59 || minute < 0 }},
+	{"second", func(second int) bool { return second > 59 || second < 0 }}}
+
 func ParseTimeString(s string) (Time, error) {
 	var splitTimeString = strings.Split(s, ":")
 	var timeStrLen = len(splitTimeString)
@@ -39,10 +44,6 @@ func ParseTimeString(s string) (Time, error) {
 		return Time{}, fmt.Errorf("incorrect number of time units returned from time string: %v", timeStrLen)
 	}
 
-	var timeUnits = []TimeInfo{
-		{"hour", func(hour int) bool { return hour > 23 || hour < 0 }},
-		{"minute", func(minute int) bool { return minute > 59 || minute < 0 }},
-		{"second", func(second int) bool { return second > 59 || second < 0 }}}
 	var intArr = []int{}
 	for i, timing := range splitTimeString {
 		// short for ascii to int. just a terrible name
