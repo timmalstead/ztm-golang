@@ -27,43 +27,42 @@ type Time struct {
 }
 
 type TimeInfo struct {
-	title     string
-	validator func(int) bool
+	title      string
+	upperBound int
 }
 
 var timeUnits = []TimeInfo{
-	{"hour", func(hour int) bool { return hour > 23 || hour < 0 }},
-	{"minute", func(minute int) bool { return minute > 59 || minute < 0 }},
-	{"second", func(second int) bool { return second > 59 || second < 0 }}}
+	{"hour", 23},
+	{"minute", 59},
+	{"second", 59},
+}
 
 func ParseTimeString(s string) (Time, error) {
 	var splitTimeString = strings.Split(s, ":")
-	var timeStrLen = len(splitTimeString)
+	var splitStrLen = len(splitTimeString)
 
-	if timeStrLen != 3 {
-		return Time{}, fmt.Errorf("incorrect number of time units returned from time string: %v", timeStrLen)
+	if splitStrLen != 3 {
+		return Time{}, fmt.Errorf("incorrect number of time units returned from time string: %v", splitStrLen)
 	}
 
 	var intArr = []int{}
 	for i, timing := range splitTimeString {
+		var currentTimeUnit = timeUnits[i]
 		// short for ascii to int. just a terrible name
 		var convertedInt, err = strconv.Atoi(timing)
 
 		if err != nil {
-			return Time{}, fmt.Errorf("error parsing %v: %v", timeUnits[i].title, err)
-		} else {
-			intArr = append(intArr, convertedInt)
+			return Time{}, fmt.Errorf("error parsing %v: %v", currentTimeUnit.title, err)
 		}
-	}
 
-	for i, timeInt := range intArr {
-		var timeIsOutOfBounds = timeUnits[i].validator(timeInt)
+		var timeIsOutOfBounds = convertedInt > currentTimeUnit.upperBound || convertedInt < 0
 
 		if timeIsOutOfBounds {
-			return Time{}, fmt.Errorf("%v out of range: %v", timeUnits[i].title, timeInt)
+			return Time{}, fmt.Errorf("%v out of range. current value is %v. it should be between 0 and %v", currentTimeUnit.title, convertedInt, currentTimeUnit.upperBound)
 		}
+
+		intArr = append(intArr, convertedInt)
 	}
 
-	var hour, minute, second = intArr[0], intArr[1], intArr[2]
-	return Time{hour, minute, second}, nil
+	return Time{intArr[0], intArr[1], intArr[2]}, nil
 }
