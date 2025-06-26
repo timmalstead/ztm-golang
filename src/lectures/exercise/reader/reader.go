@@ -18,9 +18,47 @@
 
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+)
 
+var p, f = fmt.Println, fmt.Printf
+
+// this is such a goofy implmentation
 func main() {
+	var myNewReader = bufio.NewReader(os.Stdin)
 
+	var isEndOfFile bool
+	var commandsEntered, blankLinesEntered int
+	for !isEndOfFile {
+		var input, inputErr = myNewReader.ReadString('\n')
+		var trimmedInput = strings.TrimSpace(input)
+
+		if trimmedInput == "" && inputErr != io.EOF {
+			blankLinesEntered++
+		} else {
+			if strings.ToLower(trimmedInput) == "q" {
+				p("You have quit the program")
+				inputErr = io.EOF
+			} else {
+				commandsEntered++
+
+				switch trimmedInput {
+				case "hello":
+					p("Hello there")
+				case "bye":
+					p("Goodbye")
+				default:
+					p("Okay!")
+				}
+			}
+		}
+		isEndOfFile = inputErr == io.EOF
+	}
+
+	f("you ran %v commands and entered %v blank lines", commandsEntered, blankLinesEntered)
 }
-
