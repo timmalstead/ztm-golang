@@ -18,15 +18,42 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"unicode"
+)
+
+type CharCounterFuncs map[string]func(rune) bool
+
+func findCharCounts(lines []string, funcs CharCounterFuncs) {
+	var counter = map[string]int{}
+	for _, line := range lines {
+		for _, char := range line {
+			for funcTitle, counterFunc := range funcs {
+				if counterFunc(char) {
+					counter[funcTitle]++
+					break
+				}
+			}
+		}
+	}
+	fmt.Println(counter)
+}
 
 func main() {
-	lines := []string{
+	var lines = []string{
 		"There are",
 		"68 letters,",
 		"five digits,",
 		"12 spaces,",
 		"and 4 punctuation marks in these lines of text!",
 	}
-}
+	var counterFunctions = CharCounterFuncs{
+		"letter":      unicode.IsLetter,
+		"space":       unicode.IsSpace,
+		"digit":       unicode.IsDigit,
+		"punctuation": unicode.IsPunct,
+	}
 
+	findCharCounts(lines, counterFunctions)
+}
