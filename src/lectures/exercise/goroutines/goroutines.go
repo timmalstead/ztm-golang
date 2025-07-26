@@ -44,6 +44,7 @@ func main() {
 	}
 
 	var processNumberFile = func(filePath string) {
+		// looks like dlv as controlled by vs code always runs the debugged script in the directory it is in, which means if you are opening files you need to be in that directory as well.
 		var expandedPath = fmt.Sprintf("./exercise/goroutines/%v", filePath)
 		var file, fileOpenErr = os.Open(expandedPath)
 		defer file.Close()

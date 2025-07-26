@@ -21,24 +21,45 @@ import (
 )
 
 type Job int
+type Result int
 
-func longCalculation(i Job) int {
-	duration := time.Duration(rand.Intn(1000)) * time.Millisecond
+func longCalculation(i Job) Result {
+	var duration = time.Duration(rand.Intn(1000)) * time.Millisecond
 	time.Sleep(duration)
 	fmt.Printf("Job %d complete in %v\n", i, duration)
-	return int(i) * 30
+	return Result(i) * 30
 }
 
-func makeJobs() []Job {
-	jobs := make([]Job, 0, 100)
-	for i := 0; i < 100; i++ {
-		jobs = append(jobs, Job(rand.Intn(10000)))
+func makeJobs(jobsToMake int) []Job {
+	var jobsArr = make([]Job, 0, jobsToMake)
+	for i := 0; i < jobsToMake; i++ {
+		jobsArr = append(jobsArr, Job(rand.Intn(10000)))
 	}
-	return jobs
+	return jobsArr
+}
+
+func calculator(job Job, resultChannel chan<- Result) {
+	resultChannel <- longCalculation(job)
 }
 
 func main() {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-	jobs := makeJobs()
-}
+	rand.New(rand.NewSource(time.Now().UnixNano())) // seeding the random generator
 
+	const NumberOfJobs = 100
+	var jobs = makeJobs(NumberOfJobs)
+	var resultsChannel = make(chan Result, NumberOfJobs)
+
+	var finalSum Result
+	var jobsProcessed Job
+
+	for _, job := range jobs {
+		go calculator(job, resultsChannel)
+	}
+
+	for jobsProcessed < NumberOfJobs {
+		finalSum += <-resultsChannel
+		jobsProcessed++
+	}
+
+	fmt.Println("finalSum", finalSum)
+}
