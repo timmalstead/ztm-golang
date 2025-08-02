@@ -15,20 +15,9 @@ import (
 	"github.com/chai2010/webp"
 )
 
-// ------------------------------------
-// ------------------------------------
-// ------------------------------------
-// ------------------------------------
-// ------------------------------------
-// ------------------------------------
-// ------------------------------------
-
 type ImgWithTitle struct {
-	title         string
-	base64Data    string
-	rawImageData  image.Image
-	webpBytesData bytes.Buffer
-	fileName      string
+	title string
+	data  any
 }
 
 func pipeline[I any](inputChannel <-chan I, process func(I)) <-chan I {
@@ -45,29 +34,33 @@ func pipeline[I any](inputChannel <-chan I, process func(I)) <-chan I {
 
 func saveToDisk(imgStruct *ImgWithTitle) {
 	var filename = fmt.Sprintf("%v.webp", imgStruct.title)
-	os.WriteFile(filename, imgStruct.webpBytesData.Bytes(), 0644)
-	imgStruct.fileName = filename
+	var dataAsBytes = imgStruct.data.(bytes.Buffer)
+
+	os.WriteFile(filename, dataAsBytes.Bytes(), 0644)
+	imgStruct.data = filename
 }
 
 func encodeToWebp(imgStruct *ImgWithTitle) {
 	var buffer bytes.Buffer
+	var dataAsImage = imgStruct.data.(image.Image)
 
-	if err := webp.Encode(&buffer, imgStruct.rawImageData, &webp.Options{Lossless: true}); err != nil {
+	if err := webp.Encode(&buffer, dataAsImage, &webp.Options{Lossless: true}); err != nil {
 		log.Fatal(err)
 	}
 
-	imgStruct.webpBytesData = buffer
+	imgStruct.data = buffer
 }
 
 func base64ToRawImage(imgStruct *ImgWithTitle) {
-	var reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(imgStruct.base64Data))
+	var stringData = imgStruct.data.(string) // guess this is type assertion? did not get that before
+	var reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(stringData))
 
 	var img, _, err = image.Decode(reader)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	imgStruct.rawImageData = img
+	imgStruct.data = img
 }
 
 func makeWork(imgStructs ...*ImgWithTitle) <-chan *ImgWithTitle {
@@ -86,24 +79,113 @@ func makeWork(imgStructs ...*ImgWithTitle) <-chan *ImgWithTitle {
 func main() {
 	// load data into pipeline, in reality this could be from a server or a local file, or just strings in closure like they are here
 	var (
-		imageOne   = ImgWithTitle{title: "img1", base64Data: img1}
-		imageTwo   = ImgWithTitle{title: "img2", base64Data: img2}
-		imageThree = ImgWithTitle{title: "img3", base64Data: img3}
+		imageOne   = ImgWithTitle{title: "img1", data: img1}
+		imageTwo   = ImgWithTitle{title: "img2", data: img2}
+		imageThree = ImgWithTitle{title: "img3", data: img3}
 	)
 	var base64Images = makeWork(&imageOne, &imageTwo, &imageThree)
 
-	// decode base64 into image format
+	// // decode base64 into image format
 	var rawImages = pipeline(base64Images, base64ToRawImage)
-	// encode as webp
+	// // encode as webp
 	var webpImages = pipeline(rawImages, encodeToWebp)
-	// save images to disk
+	// // save images to disk
 	var filenames = pipeline(webpImages, saveToDisk)
-
 	for img := range filenames {
-		fmt.Println(img.title, img.fileName)
+		fmt.Println(img.title, img.data)
 	}
 
 }
+
+// ------------------------------------
+// ------------------------------------
+// ------------------------------------
+// ------------------------------------
+// ------------------------------------
+// ------------------------------------
+// ------------------------------------
+
+// type ImgWithTitle struct {
+// 	title         string
+// 	base64Data    string
+// 	rawImageData  image.Image
+// 	webpBytesData bytes.Buffer
+// 	fileName      string
+// }
+
+// func pipeline[I any](inputChannel <-chan I, process func(I)) <-chan I {
+// 	var outputChannel = make(chan I)
+// 	go func() {
+// 		for input := range inputChannel {
+// 			process(input)
+// 			outputChannel <- input
+// 		}
+// 		close(outputChannel)
+// 	}()
+// 	return outputChannel
+// }
+
+// func saveToDisk(imgStruct *ImgWithTitle) {
+// 	var filename = fmt.Sprintf("%v.webp", imgStruct.title)
+// 	os.WriteFile(filename, imgStruct.webpBytesData.Bytes(), 0644)
+// 	imgStruct.fileName = filename
+// }
+
+// func encodeToWebp(imgStruct *ImgWithTitle) {
+// 	var buffer bytes.Buffer
+
+// 	if err := webp.Encode(&buffer, imgStruct.rawImageData, &webp.Options{Lossless: true}); err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	imgStruct.webpBytesData = buffer
+// }
+
+// func base64ToRawImage(imgStruct *ImgWithTitle) {
+// 	var reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(imgStruct.base64Data))
+
+// 	var img, _, err = image.Decode(reader)
+
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	imgStruct.rawImageData = img
+// }
+
+// func makeWork(imgStructs ...*ImgWithTitle) <-chan *ImgWithTitle {
+// 	var outputChannel = make(chan *ImgWithTitle)
+
+// 	go func() {
+// 		for _, imgStruct := range imgStructs {
+// 			outputChannel <- imgStruct
+// 		}
+// 		close(outputChannel)
+// 	}()
+
+// 	return outputChannel
+// }
+
+// func main() {
+// 	// load data into pipeline, in reality this could be from a server or a local file, or just strings in closure like they are here
+// 	var (
+// 		imageOne   = ImgWithTitle{title: "img1", base64Data: img1}
+// 		imageTwo   = ImgWithTitle{title: "img2", base64Data: img2}
+// 		imageThree = ImgWithTitle{title: "img3", base64Data: img3}
+// 	)
+// 	var base64Images = makeWork(&imageOne, &imageTwo, &imageThree)
+
+// 	// decode base64 into image format
+// 	var rawImages = pipeline(base64Images, base64ToRawImage)
+// 	// encode as webp
+// 	var webpImages = pipeline(rawImages, encodeToWebp)
+// 	// save images to disk
+// 	var filenames = pipeline(webpImages, saveToDisk)
+
+// 	for img := range filenames {
+// 		fmt.Println(img.title, img.fileName)
+// 	}
+
+// }
 
 // ------------------------------------
 // ------------------------------------
