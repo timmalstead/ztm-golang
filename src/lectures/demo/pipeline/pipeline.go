@@ -1,6 +1,86 @@
 package main
 
+import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"log"
+	"os"
+	"strings"
+
+	"github.com/chai2010/webp"
+	"github.com/google/uuid"
+)
+
+func pipeline[I any, O any](inputChannel <-chan I, process func(I) O) <-chan O {
+	var outputChannel = make(chan O)
+	go func() {
+		for input := range inputChannel {
+			outputChannel <- process(input)
+		}
+		close(outputChannel)
+	}()
+	return outputChannel
+}
+
+func saveToDisk(imgBuf bytes.Buffer) string {
+	var filename = fmt.Sprintf("%v.webp", uuid.New().String())
+	os.WriteFile(filename, imgBuf.Bytes(), 0644)
+	return filename
+}
+
+func encodeToWebp(img image.Image) bytes.Buffer {
+	var buffer bytes.Buffer
+
+	if err := webp.Encode(&buffer, img, &webp.Options{Lossless: true}); err != nil {
+		log.Fatal(err)
+	}
+
+	return buffer
+}
+
+func base64ToRawImage(base64Img string) image.Image {
+	var reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64Img))
+
+	var img, _, err = image.Decode(reader)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	return img
+}
+
+func makeWork(base64Images ...string) <-chan string {
+	var outputChannel = make(chan string)
+
+	go func() {
+		for _, encodedImg := range base64Images {
+			outputChannel <- encodedImg
+		}
+		close(outputChannel)
+	}()
+
+	return outputChannel
+}
+
 func main() {
+	// load data into pipeline, in reality this could be from a server or a local file, or just strings in closure like they are here
+	var base64Images = makeWork(img1, img2, img3)
+
+	// decode base64 into image format
+	var rawImages = pipeline(base64Images, base64ToRawImage)
+	// encode as webp
+	var webpImages = pipeline(rawImages, encodeToWebp)
+	// save images to disk
+	var filenames = pipeline(webpImages, saveToDisk)
+
+	for name := range filenames {
+		fmt.Println(name)
+	}
 }
 
 const img1 = `
@@ -1358,4 +1438,3 @@ z6LtJ7sIB6hGwijvOgfoINT1ns2R7krOuspOqJ/2v0nhXbUd6ycnZjPQQayRMLK6Y8zCdzXoKShc
 liuDO4QkRXsABtpVtX2ao0U44DUSSrXmvCrWjIAPxQFtym+qcZPQOGlw71I0mEr7aiimBPsyR7or
 rZxkjs8enAPaVXs4EWKooYYaaqihhhpqqKHg+h9XjDF0PqI5FQAAAABJRU5ErkJggg==
 `
-
