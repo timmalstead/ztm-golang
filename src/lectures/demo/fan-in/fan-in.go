@@ -13,6 +13,8 @@ import (
 	_ "image/png"
 	"log"
 	"os"
+	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -27,6 +29,7 @@ func makeWork(base64Images ...string) <-chan string {
 	// spawn goroutine so we don't need to wait
 	go func() {
 		for _, encodedImg := range base64Images {
+			fmt.Println("function name:  loadBase64Data")
 			out <- encodedImg
 		}
 		// use `close` to indicate that nothing
@@ -39,10 +42,17 @@ func makeWork(base64Images ...string) <-chan string {
 	return out
 }
 
+func GetFunctionName(i any) string {
+	var funcName = runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	var splitFuncName = strings.Split(funcName, ".")
+	return splitFuncName[1]
+}
+
 func pipeline[I any, O any](input <-chan I, process func(I) O) <-chan O {
 	out := make(chan O)
 	go func() {
 		for in := range input {
+			fmt.Println("function name: ", GetFunctionName(process))
 			out <- process(in)
 		}
 		close(out)
