@@ -9,6 +9,8 @@ import (
 	"image/png"
 	"log"
 	"os"
+	"reflect"
+	"runtime"
 	"strings"
 )
 
@@ -1373,10 +1375,26 @@ type ImgWithTitle struct {
 	data     any
 }
 
+// copied from https://stackoverflow.com/questions/7052693/how-to-get-the-name-of-a-function-in-go
+func GetFunctionName(i any) string {
+	var funcName = runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	var splitFuncName = strings.Split(funcName, ".")
+	return splitFuncName[1]
+}
+
+// don't understand a whole lot about the reflect package, but I can copy from stackoverflow with the best of em https://stackoverflow.com/questions/18930910/access-struct-property-by-name
+func getFileName(i any) string {
+	var valueOfInput = reflect.ValueOf(i)
+	var valueOfFileName = reflect.Indirect(valueOfInput).FieldByName("fileName")
+	return valueOfFileName.String()
+}
+
 func pipeline[I any](inputChannel <-chan I, process func(I)) <-chan I {
 	var outputChannel = make(chan I)
 	go func() {
 		for input := range inputChannel {
+
+			fmt.Println("function name: ", GetFunctionName(process), getFileName(input))
 			process(input)
 			outputChannel <- input
 		}
@@ -1432,6 +1450,7 @@ func loadBase64Data(imgStructs ...*ImgWithTitle) <-chan *ImgWithTitle {
 
 	go func() {
 		for _, imgStruct := range imgStructs {
+			fmt.Println("function name:  loadBase64Data", imgStruct.fileName)
 			outputChannel <- imgStruct
 		}
 		close(outputChannel)
@@ -1449,14 +1468,14 @@ func main() {
 	)
 	var base64Images = loadBase64Data(&imageOne, &imageTwo, &imageThree)
 
-	// // decode base64 into image format
+	// decode base64 into image format
 	var rawImages = pipeline(base64Images, base64ToRawImage)
-	// // encode as webp
+	// encode as webp
 	var imageBuffers = pipeline(rawImages, encodeToImageFormats)
-	// // save images to disk
+	// save images to disk
 	var filenames = pipeline(imageBuffers, saveToDisk)
 	for img := range filenames {
-		fmt.Println(img.fileName)
+		fmt.Println("file processed:", img.fileName)
 	}
 }
 

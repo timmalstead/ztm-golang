@@ -35,13 +35,17 @@ func makeWork(base64Images ...string) <-chan string {
 	return out
 }
 
-func pipeline[I any, O any](input <-chan I, process func(I) O) <-chan O {
+func pipeline[I any, O any](quitChannel <-chan struct{}, input <-chan I, process func(I) O) <-chan O {
 	out := make(chan O)
 	go func() {
+		defer close(out)
 		for in := range input {
-			out <- process(in)
+			select {
+			case out <- process(in):
+			case <-quitChannel:
+				return
+			}
 		}
-		close(out)
 	}()
 	return out
 }
@@ -72,10 +76,15 @@ func saveToDisk(imgBuf bytes.Buffer) string {
 }
 
 func main() {
+	var quitChannel = make(chan struct{})
+	var quitSignal struct{}
 	base64Images := makeWork(img1, img2, img3)
-	rawImages := pipeline(base64Images, base64ToRawImage)
-	webpImages := pipeline(rawImages, encodeToWebp)
-	filenames := pipeline(webpImages, saveToDisk)
+	rawImages := pipeline(quitChannel, base64Images, base64ToRawImage)
+	webpImages := pipeline(quitChannel, rawImages, encodeToWebp)
+
+	quitChannel <- quitSignal // one signal is enough becasue we've deferred the channel close function in the pipeline goroutine. but note that we CANNOT count on this to pause all execution before the images are saved to disk. it may happen that way, it may not
+
+	filenames := pipeline(quitChannel, webpImages, saveToDisk)
 	for name := range filenames {
 		fmt.Println(name)
 	}
@@ -1437,4 +1446,3 @@ z6LtJ7sIB6hGwijvOgfoINT1ns2R7krOuspOqJ/2v0nhXbUd6ycnZjPQQayRMLK6Y8zCdzXoKShc
 liuDO4QkRXsABtpVtX2ao0U44DUSSrXmvCrWjIAPxQFtym+qcZPQOGlw71I0mEr7aiimBPsyR7or
 rZxkjs8enAPaVXs4EWKooYYaaqihhhpqqKHg+h9XjDF0PqI5FQAAAABJRU5ErkJggg==
 `
-
