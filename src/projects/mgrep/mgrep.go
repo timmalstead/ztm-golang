@@ -134,12 +134,19 @@ func validateArgs(grepArgs []string) {
 	}
 }
 
-func validateSearchDirectory(searchDir string) {
+func validateSearchDirectory(searchDir string) string {
 	var directoryError = os.Chdir(searchDir)
 	if directoryError != nil {
 		log.Fatal(directoryError)
 	}
-	fmt.Printf("%v is a valid directory.\n", searchDir)
+
+	var absolutePathDir, pathErr = os.Getwd()
+	if pathErr != nil {
+		log.Fatal(pathErr)
+	}
+
+	fmt.Printf("%v is a valid directory\n", absolutePathDir)
+	return absolutePathDir
 }
 
 func recurseDirectories(dir string, files *Files) {
@@ -173,7 +180,9 @@ func getFiles(workingDir string) []string {
 	return files.paths
 }
 
-func grepFiles(searchString string, filePaths []string) {
+func grepFiles(searchString string, filePaths []string) bool {
+	var matchFound = false
+
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(len(filePaths))
 
@@ -196,6 +205,7 @@ func grepFiles(searchString string, filePaths []string) {
 				var lineHasSearchString = strings.Contains(line, searchString)
 
 				if lineHasSearchString {
+					matchFound = true
 					fmt.Printf("---\nSearch string: %v\nFile path: %v, Line number: %v\nMatching line: %v\n", searchString, path, currentLine, line)
 				}
 
@@ -207,6 +217,8 @@ func grepFiles(searchString string, filePaths []string) {
 		}()
 	}
 	waitGroup.Wait()
+
+	return matchFound
 }
 
 func main() {
@@ -214,10 +226,14 @@ func main() {
 	validateArgs(grepArgs)
 
 	var searchDir = grepArgs[1]
-	validateSearchDirectory(searchDir)
+	var absolutePath = validateSearchDirectory(searchDir)
 
-	var filePaths = getFiles(searchDir)
+	var filePaths = getFiles(absolutePath)
 
 	var searchString = grepArgs[0]
-	grepFiles(searchString, filePaths)
+	var matchesFound = grepFiles(searchString, filePaths)
+
+	if !matchesFound {
+		fmt.Printf("No matches for %v were found in %v or any of its subdirectories\n", searchString, absolutePath)
+	}
 }
