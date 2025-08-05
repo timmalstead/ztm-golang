@@ -6,14 +6,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 )
-
-type Files struct {
-	paths []string
-	sync.Mutex
-}
 
 func validateArgs(grepArgs []string) {
 	if len(grepArgs) != 2 {
@@ -36,7 +32,7 @@ func validateSearchDirectory(searchDir string) string {
 	return absolutePathDir
 }
 
-func recurseDirectories(dir string, files *Files) {
+func recurseDirectories(dir string, files *[]string) {
 	var entries, dirErr = os.ReadDir(dir)
 	if dirErr != nil {
 		log.Fatal(dirErr)
@@ -48,13 +44,11 @@ func recurseDirectories(dir string, files *Files) {
 	for _, entry := range entries {
 		go func() {
 			defer waitGroup.Done()
-			var entryName = fmt.Sprintf("%v/%v", dir, entry.Name())
+			var entryName = filepath.Join(dir, entry.Name())
 			if entry.IsDir() {
 				recurseDirectories(entryName, files)
 			} else {
-				files.Lock()
-				files.paths = append(files.paths, entryName)
-				files.Unlock()
+				*files = append(*files, entryName)
 			}
 		}()
 	}
@@ -62,9 +56,9 @@ func recurseDirectories(dir string, files *Files) {
 }
 
 func getFiles(workingDir string) []string {
-	var files = Files{}
+	var files = []string{}
 	recurseDirectories(workingDir, &files)
-	return files.paths
+	return files
 }
 
 func grepFiles(searchString string, filePaths []string) bool {
